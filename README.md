@@ -2,6 +2,8 @@
 
 This is a simple example of how to use Git sparse checkout in the browser. It uses the Git HTTP protocol and a CORS proxy to fetch specific paths from a Git repository.
 
+This works with any Git repository exposed via HTTP, not just GitHub.
+
 To try locally, install Bun and run the following commands:
 
 ```sh
