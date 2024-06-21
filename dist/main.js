@@ -937,7 +937,7 @@ var require_deflate = __commonJS({
   "node_modules/pako/lib/zlib/deflate.js"(exports) {
     "use strict";
     var utils = require_common();
-    var trees2 = require_trees();
+    var trees = require_trees();
     var adler32 = require_adler32();
     var crc322 = require_crc322();
     var msg = require_messages();
@@ -1018,7 +1018,7 @@ var require_deflate = __commonJS({
       }
     }
     function flush_block_only(s, last) {
-      trees2._tr_flush_block(s, s.block_start >= 0 ? s.block_start : -1, s.strstart - s.block_start, last);
+      trees._tr_flush_block(s, s.block_start >= 0 ? s.block_start : -1, s.strstart - s.block_start, last);
       s.block_start = s.strstart;
       flush_pending(s.strm);
     }
@@ -1212,7 +1212,7 @@ var require_deflate = __commonJS({
           s.match_length = longest_match(s, hash_head);
         }
         if (s.match_length >= MIN_MATCH) {
-          bflush = trees2._tr_tally(s, s.strstart - s.match_start, s.match_length - MIN_MATCH);
+          bflush = trees._tr_tally(s, s.strstart - s.match_start, s.match_length - MIN_MATCH);
           s.lookahead -= s.match_length;
           if (s.match_length <= s.max_lazy_match && s.lookahead >= MIN_MATCH) {
             s.match_length--;
@@ -1230,7 +1230,7 @@ var require_deflate = __commonJS({
             s.ins_h = (s.ins_h << s.hash_shift ^ s.window[s.strstart + 1]) & s.hash_mask;
           }
         } else {
-          bflush = trees2._tr_tally(s, 0, s.window[s.strstart]);
+          bflush = trees._tr_tally(s, 0, s.window[s.strstart]);
           s.lookahead--;
           s.strstart++;
         }
@@ -1288,7 +1288,7 @@ var require_deflate = __commonJS({
         }
         if (s.prev_length >= MIN_MATCH && s.match_length <= s.prev_length) {
           max_insert = s.strstart + s.lookahead - MIN_MATCH;
-          bflush = trees2._tr_tally(s, s.strstart - 1 - s.prev_match, s.prev_length - MIN_MATCH);
+          bflush = trees._tr_tally(s, s.strstart - 1 - s.prev_match, s.prev_length - MIN_MATCH);
           s.lookahead -= s.prev_length - 1;
           s.prev_length -= 2;
           do {
@@ -1308,7 +1308,7 @@ var require_deflate = __commonJS({
             }
           }
         } else if (s.match_available) {
-          bflush = trees2._tr_tally(s, 0, s.window[s.strstart - 1]);
+          bflush = trees._tr_tally(s, 0, s.window[s.strstart - 1]);
           if (bflush) {
             flush_block_only(s, false);
           }
@@ -1324,7 +1324,7 @@ var require_deflate = __commonJS({
         }
       }
       if (s.match_available) {
-        bflush = trees2._tr_tally(s, 0, s.window[s.strstart - 1]);
+        bflush = trees._tr_tally(s, 0, s.window[s.strstart - 1]);
         s.match_available = 0;
       }
       s.insert = s.strstart < MIN_MATCH - 1 ? s.strstart : MIN_MATCH - 1;
@@ -1373,12 +1373,12 @@ var require_deflate = __commonJS({
           }
         }
         if (s.match_length >= MIN_MATCH) {
-          bflush = trees2._tr_tally(s, 1, s.match_length - MIN_MATCH);
+          bflush = trees._tr_tally(s, 1, s.match_length - MIN_MATCH);
           s.lookahead -= s.match_length;
           s.strstart += s.match_length;
           s.match_length = 0;
         } else {
-          bflush = trees2._tr_tally(s, 0, s.window[s.strstart]);
+          bflush = trees._tr_tally(s, 0, s.window[s.strstart]);
           s.lookahead--;
           s.strstart++;
         }
@@ -1418,7 +1418,7 @@ var require_deflate = __commonJS({
           }
         }
         s.match_length = 0;
-        bflush = trees2._tr_tally(s, 0, s.window[s.strstart]);
+        bflush = trees._tr_tally(s, 0, s.window[s.strstart]);
         s.lookahead--;
         s.strstart++;
         if (bflush) {
@@ -1571,7 +1571,7 @@ var require_deflate = __commonJS({
       s.status = s.wrap ? INIT_STATE : BUSY_STATE;
       strm.adler = s.wrap === 2 ? 0 : 1;
       s.last_flush = Z_NO_FLUSH;
-      trees2._tr_init(s);
+      trees._tr_init(s);
       return Z_OK;
     }
     function deflateReset(strm) {
@@ -1848,9 +1848,9 @@ var require_deflate = __commonJS({
         }
         if (bstate === BS_BLOCK_DONE) {
           if (flush === Z_PARTIAL_FLUSH) {
-            trees2._tr_align(s);
+            trees._tr_align(s);
           } else if (flush !== Z_BLOCK) {
-            trees2._tr_stored_block(s, 0, 0, false);
+            trees._tr_stored_block(s, 0, 0, false);
             if (flush === Z_FULL_FLUSH) {
               zero(s.head);
               if (s.lookahead === 0) {
@@ -7582,31 +7582,6 @@ var GitPackIndex = class _GitPackIndex {
   }
 };
 
-// node_modules/isomorphic-git/src/errors/EmptyServerResponseError.js
-var EmptyServerResponseError = class _EmptyServerResponseError extends BaseError {
-  constructor() {
-    super(`Empty response from git server.`);
-    this.code = this.name = _EmptyServerResponseError.code;
-    this.data = {};
-  }
-};
-EmptyServerResponseError.code = "EmptyServerResponseError";
-
-// node_modules/isomorphic-git/src/errors/HttpError.js
-var HttpError = class _HttpError extends BaseError {
-  /**
-   * @param {number} statusCode
-   * @param {string} statusMessage
-   * @param {string} response
-   */
-  constructor(statusCode, statusMessage, response) {
-    super(`HTTP Error: ${statusCode} ${statusMessage}`);
-    this.code = this.name = _HttpError.code;
-    this.data = { statusCode, statusMessage, response };
-  }
-};
-HttpError.code = "HttpError";
-
 // node_modules/isomorphic-git/src/errors/InvalidOidError.js
 var InvalidOidError = class _InvalidOidError extends BaseError {
   /**
@@ -7619,81 +7594,6 @@ var InvalidOidError = class _InvalidOidError extends BaseError {
   }
 };
 InvalidOidError.code = "InvalidOidError";
-
-// node_modules/isomorphic-git/src/errors/ParseError.js
-var ParseError = class _ParseError extends BaseError {
-  /**
-   * @param {string} expected
-   * @param {string} actual
-   */
-  constructor(expected, actual) {
-    super(`Expected "${expected}" but received "${actual}".`);
-    this.code = this.name = _ParseError.code;
-    this.data = { expected, actual };
-  }
-};
-ParseError.code = "ParseError";
-
-// node_modules/isomorphic-git/src/errors/SmartHttpError.js
-var SmartHttpError = class _SmartHttpError extends BaseError {
-  /**
-   * @param {string} preview
-   * @param {string} response
-   */
-  constructor(preview, response) {
-    super(
-      `Remote did not reply using the "smart" HTTP protocol. Expected "001e# service=git-upload-pack" but received: ${preview}`
-    );
-    this.code = this.name = _SmartHttpError.code;
-    this.data = { preview, response };
-  }
-};
-SmartHttpError.code = "SmartHttpError";
-
-// node_modules/isomorphic-git/src/errors/UnknownTransportError.js
-var UnknownTransportError = class _UnknownTransportError extends BaseError {
-  /**
-   * @param {string} url
-   * @param {string} transport
-   * @param {string} [suggestion]
-   */
-  constructor(url, transport, suggestion) {
-    super(
-      `Git remote "${url}" uses an unrecognized transport protocol: "${transport}"`
-    );
-    this.code = this.name = _UnknownTransportError.code;
-    this.data = { url, transport, suggestion };
-  }
-};
-UnknownTransportError.code = "UnknownTransportError";
-
-// node_modules/isomorphic-git/src/errors/UrlParseError.js
-var UrlParseError = class _UrlParseError extends BaseError {
-  /**
-   * @param {string} url
-   */
-  constructor(url) {
-    super(`Cannot parse remote URL: "${url}"`);
-    this.code = this.name = _UrlParseError.code;
-    this.data = { url };
-  }
-};
-UrlParseError.code = "UrlParseError";
-
-// node_modules/isomorphic-git/src/errors/UserCanceledError.js
-var UserCanceledError = class _UserCanceledError extends BaseError {
-  constructor() {
-    super(`The operation was canceled.`);
-    this.code = this.name = _UserCanceledError.code;
-    this.data = {};
-  }
-};
-UserCanceledError.code = "UserCanceledError";
-
-// node_modules/isomorphic-git/src/utils/calculateBasicAuthHeader.js
-function calculateBasicAuthHeader({ username = "", password = "" }) {
-  return `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
-}
 
 // node_modules/isomorphic-git/src/utils/forAwait.js
 async function forAwait(iterable, cb) {
@@ -7722,292 +7622,6 @@ async function collect(iterable) {
   }
   return result;
 }
-
-// node_modules/isomorphic-git/src/utils/extractAuthFromUrl.js
-function extractAuthFromUrl(url) {
-  let userpass = url.match(/^https?:\/\/([^/]+)@/);
-  if (userpass == null) return { url, auth: {} };
-  userpass = userpass[1];
-  const [username, password] = userpass.split(":");
-  url = url.replace(`${userpass}@`, "");
-  return { url, auth: { username, password } };
-}
-
-// node_modules/isomorphic-git/src/wire/parseCapabilitiesV2.js
-async function parseCapabilitiesV2(read) {
-  const capabilities2 = {};
-  let line;
-  while (true) {
-    line = await read();
-    if (line === true) break;
-    if (line === null) continue;
-    line = line.toString("utf8").replace(/\n$/, "");
-    const i = line.indexOf("=");
-    if (i > -1) {
-      const key = line.slice(0, i);
-      const value = line.slice(i + 1);
-      capabilities2[key] = value;
-    } else {
-      capabilities2[line] = true;
-    }
-  }
-  return { protocolVersion: 2, capabilities2 };
-}
-
-// node_modules/isomorphic-git/src/wire/parseRefsAdResponse.js
-async function parseRefsAdResponse(stream, { service }) {
-  const capabilities = /* @__PURE__ */ new Set();
-  const refs2 = /* @__PURE__ */ new Map();
-  const symrefs = /* @__PURE__ */ new Map();
-  const read = GitPktLine.streamReader(stream);
-  let lineOne = await read();
-  while (lineOne === null) lineOne = await read();
-  if (lineOne === true) throw new EmptyServerResponseError();
-  if (lineOne.includes("version 2")) {
-    return parseCapabilitiesV2(read);
-  }
-  if (lineOne.toString("utf8").replace(/\n$/, "") !== `# service=${service}`) {
-    throw new ParseError(`# service=${service}\\n`, lineOne.toString("utf8"));
-  }
-  let lineTwo = await read();
-  while (lineTwo === null) lineTwo = await read();
-  if (lineTwo === true) return { capabilities, refs: refs2, symrefs };
-  lineTwo = lineTwo.toString("utf8");
-  if (lineTwo.includes("version 2")) {
-    return parseCapabilitiesV2(read);
-  }
-  const [firstRef, capabilitiesLine] = splitAndAssert(lineTwo, "\0", "\\x00");
-  capabilitiesLine.split(" ").map((x) => capabilities.add(x));
-  if (firstRef !== "0000000000000000000000000000000000000000 capabilities^{}") {
-    const [ref2, name] = splitAndAssert(firstRef, " ", " ");
-    refs2.set(name, ref2);
-    while (true) {
-      const line = await read();
-      if (line === true) break;
-      if (line !== null) {
-        const [ref3, name2] = splitAndAssert(line.toString("utf8"), " ", " ");
-        refs2.set(name2, ref3);
-      }
-    }
-  }
-  for (const cap of capabilities) {
-    if (cap.startsWith("symref=")) {
-      const m = cap.match(/symref=([^:]+):(.*)/);
-      if (m.length === 3) {
-        symrefs.set(m[1], m[2]);
-      }
-    }
-  }
-  return { protocolVersion: 1, capabilities, refs: refs2, symrefs };
-}
-function splitAndAssert(line, sep, expected) {
-  const split = line.trim().split(sep);
-  if (split.length !== 2) {
-    throw new ParseError(
-      `Two strings separated by '${expected}'`,
-      line.toString("utf8")
-    );
-  }
-  return split;
-}
-
-// node_modules/isomorphic-git/src/managers/GitRemoteHTTP.js
-var corsProxify = (corsProxy2, url) => corsProxy2.endsWith("?") ? `${corsProxy2}${url}` : `${corsProxy2}/${url.replace(/^https?:\/\//, "")}`;
-var updateHeaders = (headers, auth) => {
-  if (auth.username || auth.password) {
-    headers.Authorization = calculateBasicAuthHeader(auth);
-  }
-  if (auth.headers) {
-    Object.assign(headers, auth.headers);
-  }
-};
-var stringifyBody = async (res) => {
-  try {
-    const data = Buffer.from(await collect(res.body));
-    const response = data.toString("utf8");
-    const preview = response.length < 256 ? response : response.slice(0, 256) + "...";
-    return { preview, response, data };
-  } catch (e) {
-    return {};
-  }
-};
-var GitRemoteHTTP = class {
-  static async capabilities() {
-    return ["discover", "connect"];
-  }
-  /**
-   * @param {Object} args
-   * @param {HttpClient} args.http
-   * @param {ProgressCallback} [args.onProgress]
-   * @param {AuthCallback} [args.onAuth]
-   * @param {AuthFailureCallback} [args.onAuthFailure]
-   * @param {AuthSuccessCallback} [args.onAuthSuccess]
-   * @param {string} [args.corsProxy]
-   * @param {string} args.service
-   * @param {string} args.url
-   * @param {Object<string, string>} args.headers
-   * @param {1 | 2} args.protocolVersion - Git Protocol Version
-   */
-  static async discover({
-    http,
-    onProgress,
-    onAuth,
-    onAuthSuccess,
-    onAuthFailure,
-    corsProxy: corsProxy2,
-    service,
-    url: _origUrl,
-    headers,
-    protocolVersion
-  }) {
-    let { url, auth } = extractAuthFromUrl(_origUrl);
-    const proxifiedURL = corsProxy2 ? corsProxify(corsProxy2, url) : url;
-    if (auth.username || auth.password) {
-      headers.Authorization = calculateBasicAuthHeader(auth);
-    }
-    if (protocolVersion === 2) {
-      headers["Git-Protocol"] = "version=2";
-    }
-    let res;
-    let tryAgain;
-    let providedAuthBefore = false;
-    do {
-      res = await http.request({
-        onProgress,
-        method: "GET",
-        url: `${proxifiedURL}/info/refs?service=${service}`,
-        headers
-      });
-      tryAgain = false;
-      if (res.statusCode === 401 || res.statusCode === 203) {
-        const getAuth = providedAuthBefore ? onAuthFailure : onAuth;
-        if (getAuth) {
-          auth = await getAuth(url, {
-            ...auth,
-            headers: { ...headers }
-          });
-          if (auth && auth.cancel) {
-            throw new UserCanceledError();
-          } else if (auth) {
-            updateHeaders(headers, auth);
-            providedAuthBefore = true;
-            tryAgain = true;
-          }
-        }
-      } else if (res.statusCode === 200 && providedAuthBefore && onAuthSuccess) {
-        await onAuthSuccess(url, auth);
-      }
-    } while (tryAgain);
-    if (res.statusCode !== 200) {
-      const { response } = await stringifyBody(res);
-      throw new HttpError(res.statusCode, res.statusMessage, response);
-    }
-    if (res.headers["content-type"] === `application/x-${service}-advertisement`) {
-      const remoteHTTP = await parseRefsAdResponse(res.body, { service });
-      remoteHTTP.auth = auth;
-      return remoteHTTP;
-    } else {
-      const { preview, response, data } = await stringifyBody(res);
-      try {
-        const remoteHTTP = await parseRefsAdResponse([data], { service });
-        remoteHTTP.auth = auth;
-        return remoteHTTP;
-      } catch (e) {
-        throw new SmartHttpError(preview, response);
-      }
-    }
-  }
-  /**
-   * @param {Object} args
-   * @param {HttpClient} args.http
-   * @param {ProgressCallback} [args.onProgress]
-   * @param {string} [args.corsProxy]
-   * @param {string} args.service
-   * @param {string} args.url
-   * @param {Object<string, string>} [args.headers]
-   * @param {any} args.body
-   * @param {any} args.auth
-   */
-  static async connect({
-    http,
-    onProgress,
-    corsProxy: corsProxy2,
-    service,
-    url,
-    auth,
-    body,
-    headers
-  }) {
-    const urlAuth = extractAuthFromUrl(url);
-    if (urlAuth) url = urlAuth.url;
-    if (corsProxy2) url = corsProxify(corsProxy2, url);
-    headers["content-type"] = `application/x-${service}-request`;
-    headers.accept = `application/x-${service}-result`;
-    updateHeaders(headers, auth);
-    const res = await http.request({
-      onProgress,
-      method: "POST",
-      url: `${url}/${service}`,
-      body,
-      headers
-    });
-    if (res.statusCode !== 200) {
-      const { response } = stringifyBody(res);
-      throw new HttpError(res.statusCode, res.statusMessage, response);
-    }
-    return res;
-  }
-};
-
-// node_modules/isomorphic-git/src/utils/translateSSHtoHTTP.js
-function translateSSHtoHTTP(url) {
-  url = url.replace(/^git@([^:]+):/, "https://$1/");
-  url = url.replace(/^ssh:\/\//, "https://");
-  return url;
-}
-
-// node_modules/isomorphic-git/src/managers/GitRemoteManager.js
-function parseRemoteUrl({ url }) {
-  if (url.startsWith("git@")) {
-    return {
-      transport: "ssh",
-      address: url
-    };
-  }
-  const matches = url.match(/(\w+)(:\/\/|::)(.*)/);
-  if (matches === null) return;
-  if (matches[2] === "://") {
-    return {
-      transport: matches[1],
-      address: matches[0]
-    };
-  }
-  if (matches[2] === "::") {
-    return {
-      transport: matches[1],
-      address: matches[3]
-    };
-  }
-}
-var GitRemoteManager = class {
-  static getRemoteHelperFor({ url }) {
-    const remoteHelpers = /* @__PURE__ */ new Map();
-    remoteHelpers.set("http", GitRemoteHTTP);
-    remoteHelpers.set("https", GitRemoteHTTP);
-    const parts = parseRemoteUrl({ url });
-    if (!parts) {
-      throw new UrlParseError(url);
-    }
-    if (remoteHelpers.has(parts.transport)) {
-      return remoteHelpers.get(parts.transport);
-    }
-    throw new UnknownTransportError(
-      url,
-      parts.transport,
-      parts.transport === "ssh" ? translateSSHtoHTTP(url) : void 0
-    );
-  }
-};
 
 // node_modules/isomorphic-git/src/utils/FIFO.js
 var FIFO = class {
@@ -8216,56 +7830,29 @@ async function parseUploadPackResponse(stream) {
   });
 }
 
-// node_modules/isomorphic-git/src/utils/fromStream.js
-function fromStream(stream) {
-  if (stream[Symbol.asyncIterator]) return stream;
-  const reader = stream.getReader();
-  return {
-    next() {
-      return reader.read();
-    },
-    return() {
-      reader.releaseLock();
-      return {};
-    },
-    [Symbol.asyncIterator]() {
-      return this;
-    }
-  };
-}
-
-// node_modules/isomorphic-git/src/http/web/index.js
-async function request({
-  onProgress,
-  url,
-  method = "GET",
-  headers = {},
-  body
-}) {
-  if (body) {
-    body = await collect(body);
-  }
-  const res = await fetch(url, { method, headers, body });
-  const iter = res.body && res.body.getReader ? fromStream(res.body) : [new Uint8Array(await res.arrayBuffer())];
-  headers = {};
-  for (const [key, value] of res.headers.entries()) {
-    headers[key] = value;
-  }
-  return {
-    url: res.url,
-    method: res.method,
-    statusCode: res.status,
-    statusMessage: res.statusText,
-    body: iter,
-    headers
-  };
-}
-var web_default = { request };
-
 // src/main.js
 var import_buffer = __toESM(require_buffer(), 1);
 window.Buffer = import_buffer.Buffer;
-async function fetchRefs(repoUrl2, refPrefix) {
+console.log(
+  await sparseCheckout(
+    `http://127.0.0.1:8942/https://github.com/wordpress/gutenberg`,
+    "HEAD",
+    ["docs/tool", "platform-docs/docs/basic-concepts", "readme.txt"]
+  )
+);
+async function sparseCheckout(repoUrl, ref, paths) {
+  const refs = await lsRefs(repoUrl, ref);
+  const commitHash = refs[ref];
+  const idx = await fetchWithoutBlobs(repoUrl, commitHash, paths);
+  const objects = await resolveObjects(idx, commitHash, paths);
+  const fetchedPaths = {};
+  await Promise.all(paths.map(async (path) => {
+    const idx2 = await fetchObject(repoUrl, objects[path].oid);
+    fetchedPaths[path] = await extractGitObjectFromIdx(idx2, objects[path].oid);
+  }));
+  return fetchedPaths;
+}
+async function lsRefs(repoUrl, refPrefix) {
   const packbuffer = import_buffer.Buffer.from(await collect([
     GitPktLine.encode(`command=ls-refs
 `),
@@ -8280,7 +7867,7 @@ async function fetchRefs(repoUrl2, refPrefix) {
 `),
     GitPktLine.flush()
   ]));
-  const res = await fetch(repoUrl2 + "/git-upload-pack", {
+  const response = await fetch(repoUrl + "/git-upload-pack", {
     method: "POST",
     headers: {
       "Accept": "application/x-git-upload-pack-advertisement",
@@ -8290,20 +7877,18 @@ async function fetchRefs(repoUrl2, refPrefix) {
     },
     body: packbuffer
   });
-  const text = await res.text();
-  console.log({ text });
-  const refs2 = {};
-  for (const line of text.split("\n")) {
-    if (line === "0000") break;
-    const [ref2, name] = line.slice(4).split(" ");
-    refs2[name] = ref2;
+  const refs = {};
+  for await (const line of parseGitResponseLines(response)) {
+    const spaceAt = line.indexOf(" ");
+    const ref = line.slice(0, spaceAt);
+    const name = line.slice(spaceAt + 1, line.length - 1);
+    refs[name] = ref;
   }
-  ;
-  return refs2;
+  return refs;
 }
-async function fetchObjectHashes(repoUrl2, commitHash, paths2) {
+async function fetchWithoutBlobs(repoUrl, commitHash) {
   const packbuffer = import_buffer.Buffer.from(await collect([
-    GitPktLine.encode(`want ${commitHash} multi_ack_detailed no-done side-band-64k thin-pack ofs-delta agent=git/2.10.1.windows.1 filter 
+    GitPktLine.encode(`want ${commitHash} multi_ack_detailed no-done side-band-64k thin-pack ofs-delta agent=git/2.37.3 filter 
 `),
     GitPktLine.encode(`filter blob:none
 `),
@@ -8317,20 +7902,18 @@ async function fetchObjectHashes(repoUrl2, commitHash, paths2) {
     GitPktLine.encode(`done
 `)
   ]));
-  const raw = await GitRemoteHTTP2.connect({
-    http: web_default,
-    onProgress: null,
-    // (args) {
-    //     console.log({ args });
-    // },
-    service: "git-upload-pack",
-    url: repoUrl2,
-    auth: {},
-    body: [packbuffer],
-    headers: {}
+  const response = await fetch(repoUrl + "/git-upload-pack", {
+    method: "POST",
+    headers: {
+      "Accept": "application/x-git-upload-pack-advertisement",
+      "content-type": "application/x-git-upload-pack-request",
+      "Content-Length": packbuffer.length
+    },
+    body: packbuffer
   });
-  const response = await parseUploadPackResponse(raw.body);
-  const packfile = import_buffer.Buffer.from(await collect(response.packfile));
+  const iterator = streamToIterator(await response.body);
+  const parsed = await parseUploadPackResponse(iterator);
+  const packfile = import_buffer.Buffer.from(await collect(parsed.packfile));
   const idx = await GitPackIndex.fromPack({
     pack: packfile
   });
@@ -8340,15 +7923,17 @@ async function fetchObjectHashes(repoUrl2, commitHash, paths2) {
     result.oid = oid;
     return result;
   };
-  console.log(idx);
+  return idx;
+}
+async function resolveObjects(idx, commitHash, paths) {
   const commit = await idx.read({
     oid: commitHash
   });
   readObject(commit);
-  let rootTree = await idx.read({ oid: commit.object.tree });
+  const rootTree = await idx.read({ oid: commit.object.tree });
   readObject(rootTree);
-  const resolvedRefs = {};
-  for (const path of paths2) {
+  const resolvedOids = {};
+  for (const path of paths) {
     let currentObject = rootTree;
     const segments = path.split("/");
     for (const segment of segments) {
@@ -8359,8 +7944,12 @@ async function fetchObjectHashes(repoUrl2, commitHash, paths2) {
       let found = false;
       for (const item of currentObject.object) {
         if (item.path === segment) {
-          currentObject = await idx.read({ oid: item.oid });
-          readObject(currentObject);
+          try {
+            currentObject = await idx.read({ oid: item.oid });
+            readObject(currentObject);
+          } catch (e) {
+            currentObject = item;
+          }
           found = true;
           break;
         }
@@ -8369,53 +7958,50 @@ async function fetchObjectHashes(repoUrl2, commitHash, paths2) {
         throw new Error(`Path not found in the repo: ${path}`);
       }
     }
-    resolvedRefs[path] = currentObject;
+    resolvedOids[path] = currentObject;
   }
-  return resolvedRefs;
+  return resolvedOids;
 }
-async function fetchTree(url, treeHash) {
-  console.log("Tree", treeHash);
-  const packbuffer2 = import_buffer.Buffer.from(await collect([
-    GitPktLine.encode(`want ${treeHash} multi_ack_detailed no-done side-band-64k thin-pack ofs-delta agent=git/2.10.1.windows.1 
+async function fetchObject(url, objectHash) {
+  console.log("Tree", objectHash);
+  const packbuffer = import_buffer.Buffer.from(await collect([
+    GitPktLine.encode(`want ${objectHash} multi_ack_detailed no-done side-band-64k thin-pack ofs-delta agent=git/2.37.3 
 `),
-    // GitPktLine.encode(`shallow ${treeHash}\n`),
-    // GitPktLine.encode(`deepen 1\n`),
     GitPktLine.flush(),
-    // GitPktLine.encode(`done\n`),
     GitPktLine.encode(`done
 `)
   ]));
-  console.log(packbuffer2.toString("utf8"));
-  const raw2 = await GitRemoteHTTP2.connect({
-    http: web_default,
-    onProgress: null,
-    // (args) {
-    //     console.log({ args });
-    // },
-    service: "git-upload-pack",
-    url,
-    auth: {},
-    body: [packbuffer2],
-    headers: {}
+  const response = await fetch(url + "/git-upload-pack", {
+    method: "POST",
+    headers: {
+      "Accept": "application/x-git-upload-pack-advertisement",
+      "content-type": "application/x-git-upload-pack-request",
+      "Content-Length": packbuffer.length
+    },
+    body: packbuffer
   });
-  const response2 = await parseUploadPackResponse(raw2.body);
-  const packfile2 = import_buffer.Buffer.from(await collect(response2.packfile));
-  const idx2 = await GitPackIndex.fromPack({
-    pack: packfile2
+  const iterator = streamToIterator(await response.body);
+  const parsed = await parseUploadPackResponse(iterator);
+  const packfile = import_buffer.Buffer.from(await collect(parsed.packfile));
+  const idx = await GitPackIndex.fromPack({
+    pack: packfile
   });
-  return await toFiles(idx2, treeHash);
+  return idx;
 }
-async function toFiles(idx, treeHash) {
-  const tree = await idx.read({ oid: treeHash });
+async function extractGitObjectFromIdx(idx, objectHash) {
+  const tree = await idx.read({ oid: objectHash });
   readObject(tree);
+  if (tree.type === "blob") {
+    return tree.object;
+  }
   const files = {};
   for (const { path, oid, type } of tree.object) {
     if (type === "blob") {
       const object = await idx.read({ oid });
       readObject(object);
-      files[path] = new TextDecoder().decode(object.object);
+      files[path] = object.object;
     } else if (type === "tree") {
-      files[path] = await toFiles(idx, oid);
+      files[path] = await extractGitObjectFromIdx(idx, oid);
     }
   }
   return files;
@@ -8446,16 +8032,35 @@ function readObject(result) {
       );
   }
 }
-var corsProxy = "http://127.0.0.1:8942";
-var repoUrl = "https://gitlab.com/gitlab-org/gitlab.git";
-var paths = ["changelogs"];
-var corsUrl = corsProxy + "/" + repoUrl;
-var GitRemoteHTTP2 = GitRemoteManager.getRemoteHelperFor({ url: corsUrl });
-var ref = "HEAD";
-var refs = await fetchRefs(corsUrl, ref);
-var objects = await fetchObjectHashes(corsUrl, refs[ref], paths);
-var trees = await fetchTree(corsUrl, objects[paths[0]].oid);
-console.log({ trees });
+async function* parseGitResponseLines(response) {
+  const text = await response.text();
+  let at = 0;
+  while (at <= text.length) {
+    const lineLength = parseInt(text.substring(at, at + 4), 16);
+    if (lineLength === 0) {
+      break;
+    }
+    const line = text.substring(at + 4, at + lineLength);
+    yield line;
+    at += lineLength;
+  }
+}
+function streamToIterator(stream) {
+  if (stream[Symbol.asyncIterator]) return stream;
+  const reader = stream.getReader();
+  return {
+    next() {
+      return reader.read();
+    },
+    return() {
+      reader.releaseLock();
+      return {};
+    },
+    [Symbol.asyncIterator]() {
+      return this;
+    }
+  };
+}
 /*! Bundled license information:
 
 crc-32/crc32.js:

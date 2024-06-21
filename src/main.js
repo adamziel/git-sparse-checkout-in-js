@@ -4,15 +4,40 @@ import { GitAnnotatedTag } from 'isomorphic-git/src/models/GitAnnotatedTag.js'
 import { GitCommit } from 'isomorphic-git/src/models/GitCommit.js'
 import { GitPackIndex } from 'isomorphic-git/src/models/GitPackIndex.js'
 import { collect } from 'isomorphic-git/src/internal-apis.js'
-import { GitRemoteManager } from 'isomorphic-git/src/managers/GitRemoteManager.js'
 import { parseUploadPackResponse } from 'isomorphic-git/src/wire/parseUploadPackResponse.js'
 import { parseRefsAdResponse } from 'isomorphic-git/src/wire/parseRefsAdResponse.js'
 import { listpack } from 'isomorphic-git/src/utils/git-list-pack.js'
-import http from 'isomorphic-git/src/http/web/index.js';
 import { Buffer } from 'buffer'
 window.Buffer = Buffer;
 
-async function fetchRefs(repoUrl, refPrefix) {
+
+console.log(
+    await sparseCheckout(
+        `http://127.0.0.1:8942/https://github.com/wordpress/gutenberg`,
+        'HEAD',
+        ['docs/tool', 'platform-docs/docs/basic-concepts', 'readme.txt']
+    )
+);
+
+async function sparseCheckout(
+    repoUrl,
+    ref,
+    paths,
+) {
+    const refs = await lsRefs(repoUrl, ref);
+    const commitHash = refs[ref];
+    const idx = await fetchWithoutBlobs(repoUrl, commitHash, paths);
+    const objects = await resolveObjects(idx, commitHash, paths);
+    const fetchedPaths = {};
+    await Promise.all(paths.map(async path => {
+        const idx = await fetchObject(repoUrl, objects[path].oid);
+        fetchedPaths[path] = await extractGitObjectFromIdx(idx, objects[path].oid)
+    }));
+    return fetchedPaths;
+}
+
+
+async function lsRefs(repoUrl, refPrefix) {
     const packbuffer = Buffer.from(await collect([
         GitPktLine.encode(`command=ls-refs\n`),
         GitPktLine.encode(`agent=git/2.37.3\n`),
@@ -22,7 +47,8 @@ async function fetchRefs(repoUrl, refPrefix) {
         GitPktLine.encode(`ref-prefix ${refPrefix}\n`),
         GitPktLine.flush(),
     ]));
-    const res = await fetch(repoUrl+'/git-upload-pack', {
+
+    const response = await fetch(repoUrl + '/git-upload-pack', {
         method: 'POST',
         headers: {
             'Accept': 'application/x-git-upload-pack-advertisement',
@@ -32,21 +58,20 @@ async function fetchRefs(repoUrl, refPrefix) {
         },
         body: packbuffer,
     });
-    const text = await res.text();
-    console.log({text})
+
     const refs = {};
-    for (const line of text.split('\n')) {
-        if (line === '0000') break;
-        const [ref, name] = line.slice(4).split(' ');
+    for await (const line of parseGitResponseLines(response)) {
+        const spaceAt = line.indexOf(' ');
+        const ref = line.slice(0, spaceAt);
+        const name = line.slice(spaceAt + 1, line.length - 1);
         refs[name] = ref;
-    };
+    }
     return refs;
 }
 
-
-async function fetchObjectHashes(repoUrl, commitHash, paths) {
+async function fetchWithoutBlobs(repoUrl, commitHash) {
     const packbuffer = Buffer.from(await collect([
-        GitPktLine.encode(`want ${commitHash} multi_ack_detailed no-done side-band-64k thin-pack ofs-delta agent=git/2.10.1.windows.1 filter \n`),
+        GitPktLine.encode(`want ${commitHash} multi_ack_detailed no-done side-band-64k thin-pack ofs-delta agent=git/2.37.3 filter \n`),
         GitPktLine.encode(`filter blob:none\n`),
         GitPktLine.encode(`shallow ${commitHash}\n`),
         GitPktLine.encode(`deepen 1\n`),
@@ -55,21 +80,20 @@ async function fetchObjectHashes(repoUrl, commitHash, paths) {
         GitPktLine.encode(`done\n`),
     ]));
 
-    const raw = await GitRemoteHTTP.connect({
-        http,
-        onProgress: null,
-        // (args) {
-        //     console.log({ args });
-        // },
-        service: 'git-upload-pack',
-        url: repoUrl,
-        auth: {},
-        body: [packbuffer],
-        headers: {},
-    })
+    const response = await fetch(repoUrl + '/git-upload-pack', {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/x-git-upload-pack-advertisement',
+            'content-type': 'application/x-git-upload-pack-request',
+            'Content-Length': packbuffer.length,
+        },
+        body: packbuffer,
+    });
 
-    const response = await parseUploadPackResponse(raw.body)
-    const packfile = Buffer.from(await collect(response.packfile))
+    const iterator = streamToIterator(await response.body);
+
+    const parsed = await parseUploadPackResponse(iterator)
+    const packfile = Buffer.from(await collect(parsed.packfile))
     const idx = await GitPackIndex.fromPack({
         pack: packfile
     });
@@ -79,18 +103,20 @@ async function fetchObjectHashes(repoUrl, commitHash, paths) {
         result.oid = oid;
         return result;
     }
-    console.log(idx);
+    return idx;
+}
 
+async function resolveObjects(idx, commitHash, paths) {
     const commit = await idx.read({
         oid: commitHash
     });
     readObject(commit);
 
-    let rootTree = await idx.read({ oid: commit.object.tree });
+    const rootTree = await idx.read({ oid: commit.object.tree });
     readObject(rootTree);
 
     // Resolve refs to fetch
-    const resolvedRefs = {};
+    const resolvedOids = {};
     for (const path of paths) {
         let currentObject = rootTree;
         const segments = path.split('/');
@@ -103,8 +129,12 @@ async function fetchObjectHashes(repoUrl, commitHash, paths) {
             let found = false;
             for (const item of currentObject.object) {
                 if (item.path === segment) {
-                    currentObject = await idx.read({ oid: item.oid });
-                    readObject(currentObject);
+                    try {
+                        currentObject = await idx.read({ oid: item.oid });
+                        readObject(currentObject);
+                    } catch (e) {
+                        currentObject = item;
+                    }
                     found = true;
                     break;
                 }
@@ -113,58 +143,55 @@ async function fetchObjectHashes(repoUrl, commitHash, paths) {
                 throw new Error(`Path not found in the repo: ${path}`);
             }
         }
-        resolvedRefs[path] = currentObject;
+        resolvedOids[path] = currentObject;
     }
-    return resolvedRefs;
+    return resolvedOids;
 }
 
 // Request oid for each resolvedRef
-async function fetchTree(url, treeHash) {
-    console.log("Tree", treeHash)
-    const packbuffer2 = Buffer.from(await collect([
-        GitPktLine.encode(`want ${treeHash} multi_ack_detailed no-done side-band-64k thin-pack ofs-delta agent=git/2.10.1.windows.1 \n`),
-        // GitPktLine.encode(`shallow ${treeHash}\n`),
-        // GitPktLine.encode(`deepen 1\n`),
+async function fetchObject(url, objectHash) {
+    console.log("Tree", objectHash)
+    const packbuffer = Buffer.from(await collect([
+        GitPktLine.encode(`want ${objectHash} multi_ack_detailed no-done side-band-64k thin-pack ofs-delta agent=git/2.37.3 \n`),
         GitPktLine.flush(),
-        // GitPktLine.encode(`done\n`),
         GitPktLine.encode(`done\n`),
     ]));
-    console.log(packbuffer2.toString('utf8'));
-    const raw2 = await GitRemoteHTTP.connect({
-        http,
-        onProgress: null,
-        // (args) {
-        //     console.log({ args });
-        // },
-        service: 'git-upload-pack',
-        url,
-        auth: {},
-        body: [packbuffer2],
-        headers: {},
-    })
 
-    const response2 = await parseUploadPackResponse(raw2.body)
-    const packfile2 = Buffer.from(await collect(response2.packfile))
-    const idx2 = await GitPackIndex.fromPack({
-        pack: packfile2
+    const response = await fetch(url + '/git-upload-pack', {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/x-git-upload-pack-advertisement',
+            'content-type': 'application/x-git-upload-pack-request',
+            'Content-Length': packbuffer.length,
+        },
+        body: packbuffer,
     });
 
-    return await toFiles(idx2, treeHash);
+    const iterator = streamToIterator(await response.body);
+    const parsed = await parseUploadPackResponse(iterator)
+    const packfile = Buffer.from(await collect(parsed.packfile))
+    const idx = await GitPackIndex.fromPack({
+        pack: packfile
+    });
+
+    return idx;
 }
 
-async function toFiles(idx, treeHash) {
-    const tree = await idx.read({ oid: treeHash });
+async function extractGitObjectFromIdx(idx, objectHash) {
+    const tree = await idx.read({ oid: objectHash });
     readObject(tree);
+    if (tree.type === "blob") {
+        return tree.object;
+    }
+
     const files = {};
     for (const {path, oid, type} of tree.object) {
         if (type === 'blob') {
             const object = await idx.read({ oid });
             readObject(object);
-            files[path] = new TextDecoder().decode(object.object);
-            // files[path] = object.object;
-            // files[path] = object.object.length;
+            files[path] = object.object;
         } else if (type === 'tree') {
-            files[path] = await toFiles(idx, oid);
+            files[path] = await extractGitObjectFromIdx(idx, oid);
         }
     }
     return files;
@@ -196,21 +223,37 @@ function readObject(result) {
             )
     }
 }
+
+async function* parseGitResponseLines(response) {
+    const text = await response.text();
+    let at = 0;
+
+    while (at <= text.length) {
+        const lineLength = parseInt(text.substring(at, at + 4), 16);
+        if (lineLength === 0) {
+            break;
+        }
+        const line = text.substring(at + 4, at + lineLength);
+        yield line;
+        at += lineLength;
+    }
+}
+
+function streamToIterator(stream) {
+    // Use native async iteration if it's available.
+    if (stream[Symbol.asyncIterator]) return stream
+    const reader = stream.getReader()
+    return {
+      next() {
+        return reader.read()
+      },
+      return() {
+        reader.releaseLock()
+        return {}
+      },
+      [Symbol.asyncIterator]() {
+        return this
+      },
+    }
+}
   
-
-const corsProxy = 'http://127.0.0.1:8942';
-// const repoUrl = 'https://github.com/wordpress/gutenberg';
-// const paths = ['docs/tool'];
-
-const repoUrl = 'https://gitlab.com/gitlab-org/gitlab.git';
-const paths = ['changelogs'];
-
-const corsUrl = corsProxy + '/' + repoUrl;
-
-const GitRemoteHTTP = GitRemoteManager.getRemoteHelperFor({ url: corsUrl })
-const ref = 'HEAD';
-
-const refs = await fetchRefs(corsUrl, ref);
-const objects = await fetchObjectHashes(corsUrl, refs[ref], paths);
-const trees = await fetchTree(corsUrl, objects[paths[0]].oid);
-console.log({ trees });
