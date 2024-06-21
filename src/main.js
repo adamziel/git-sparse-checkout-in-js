@@ -5,8 +5,6 @@ import { GitCommit } from 'isomorphic-git/src/models/GitCommit.js'
 import { GitPackIndex } from 'isomorphic-git/src/models/GitPackIndex.js'
 import { collect } from 'isomorphic-git/src/internal-apis.js'
 import { parseUploadPackResponse } from 'isomorphic-git/src/wire/parseUploadPackResponse.js'
-import { parseRefsAdResponse } from 'isomorphic-git/src/wire/parseRefsAdResponse.js'
-import { listpack } from 'isomorphic-git/src/utils/git-list-pack.js'
 import { Buffer } from 'buffer'
 window.Buffer = Buffer;
 
@@ -21,7 +19,7 @@ export async function sparseCheckout(
     const objects = await resolveObjects(treesIdx, commitHash, paths);
 
     const blobsIdx = await fetchObjects(repoUrl, paths.map(path => objects[path].oid));
-    
+
     const fetchedPaths = {};
     await Promise.all(paths.map(async path => {
         fetchedPaths[path] = await extractGitObjectFromIdx(blobsIdx, objects[path].oid)
