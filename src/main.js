@@ -10,28 +10,20 @@ import { listpack } from 'isomorphic-git/src/utils/git-list-pack.js'
 import { Buffer } from 'buffer'
 window.Buffer = Buffer;
 
-
-console.log(
-    await sparseCheckout(
-        `http://127.0.0.1:8942/https://github.com/wordpress/gutenberg`,
-        'HEAD',
-        ['docs/tool', 'platform-docs/docs/basic-concepts', 'readme.txt']
-    )
-);
-
-async function sparseCheckout(
+export async function sparseCheckout(
     repoUrl,
     ref,
     paths,
 ) {
     const refs = await lsRefs(repoUrl, ref);
     const commitHash = refs[ref];
-    const idx = await fetchWithoutBlobs(repoUrl, commitHash, paths);
-    const objects = await resolveObjects(idx, commitHash, paths);
+    const treesIdx = await fetchWithoutBlobs(repoUrl, commitHash, paths);
+    const objects = await resolveObjects(treesIdx, commitHash, paths);
     const fetchedPaths = {};
+
+    const blobsIdx = await fetchObjects(repoUrl, paths.map(path => objects[path].oid));
     await Promise.all(paths.map(async path => {
-        const idx = await fetchObject(repoUrl, objects[path].oid);
-        fetchedPaths[path] = await extractGitObjectFromIdx(idx, objects[path].oid)
+        fetchedPaths[path] = await extractGitObjectFromIdx(blobsIdx, objects[path].oid)
     }));
     return fetchedPaths;
 }
@@ -149,10 +141,11 @@ async function resolveObjects(idx, commitHash, paths) {
 }
 
 // Request oid for each resolvedRef
-async function fetchObject(url, objectHash) {
-    console.log("Tree", objectHash)
+async function fetchObjects(url, objectHashes) {
     const packbuffer = Buffer.from(await collect([
-        GitPktLine.encode(`want ${objectHash} multi_ack_detailed no-done side-band-64k thin-pack ofs-delta agent=git/2.37.3 \n`),
+        ...objectHashes.map(objectHash =>
+            GitPktLine.encode(`want ${objectHash} multi_ack_detailed no-done side-band-64k thin-pack ofs-delta agent=git/2.37.3 \n`),
+        ),
         GitPktLine.flush(),
         GitPktLine.encode(`done\n`),
     ]));
@@ -170,16 +163,15 @@ async function fetchObject(url, objectHash) {
     const iterator = streamToIterator(await response.body);
     const parsed = await parseUploadPackResponse(iterator)
     const packfile = Buffer.from(await collect(parsed.packfile))
-    const idx = await GitPackIndex.fromPack({
+    return await GitPackIndex.fromPack({
         pack: packfile
     });
-
-    return idx;
 }
 
 async function extractGitObjectFromIdx(idx, objectHash) {
     const tree = await idx.read({ oid: objectHash });
     readObject(tree);
+
     if (tree.type === "blob") {
         return tree.object;
     }

@@ -4,8 +4,96 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sparse Checkout with </title>
+<style>
+    .spinner {
+        display: none;
+        /* Add your spinner styles here */
+    }
+    label {
+        display: inline-block;
+        margin-bottom: 5px;
+        width: 150px;
+        cursor: pointer;
+    }
+    input[type="text"] {
+        padding: 10px;
+        border: 1px solid #ccc;
+        min-width: 300px;
+        box-sizing: border-box;
+    }
+    button[type="submit"] {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+</style>
 </head>
 <body>
-<script type="module" src="./main.js"></script>
+<form id="sparseCheckoutForm">
+    <label for="repositoryUrl">Repository URL:</label>
+    <input type="text" id="repositoryUrl" name="repositoryUrl" required value="http://127.0.0.1:8942/https://github.com/wordpress/gutenberg"><br><br>
+    <label for="branch">Remote ref:</label>
+    <input type="text" id="branch" name="branch" required value="HEAD"><br><br>
+    <label for="paths">Paths:</label>
+    <input type="text" id="paths" name="paths" required value="docs/tool,platform-docs/docs/basic-concepts,readme.txt"><br><br>
+    <button type="submit">Sparse checkout!</button>
+</form>
+<br><br>
+<div id="spinner" class="spinner">Running sparse checkout, see devtools for more details...</div>
+<pre id="results"></pre>
+
+<script type="module">
+    import { sparseCheckout } from './main.js';
+
+    const form = document.getElementById('sparseCheckoutForm');
+    const spinner = document.getElementById('spinner');
+    const resultsContainer = document.getElementById('results');
+
+    const submitForm = async (event) => {
+        event?.preventDefault();
+
+        const repositoryUrl = document.getElementById('repositoryUrl').value;
+        const branch = document.getElementById('branch').value;
+        const paths = document.getElementById('paths').value.split(',');
+
+        spinner.style.display = 'block';
+
+        try {
+            console.log({paths});
+            const result = await sparseCheckout(repositoryUrl, branch, paths);
+
+            // Convert UINT8Arrays to text
+            convertUINT8ArraysToText(result);
+
+            // Display the results in the UI
+            resultsContainer.innerText = JSON.stringify(result, null, 4);
+        } catch (error) {
+            resultsContainer.innerText = `Error: ${error.message}`;
+        } finally {
+            spinner.style.display = 'none';
+        }
+    }
+    form.addEventListener('submit', submitForm);
+    submitForm();
+
+    function convertUINT8ArraysToText(result) {
+        // Implement your conversion logic here
+        // Iterate through the result object and convert UINT8Arrays to text
+        // Return the converted result
+
+        for (const key in result) {
+            if (result[key] instanceof Uint8Array) {
+                result[key] = new TextDecoder().decode(result[key]);
+            } else if (typeof result[key] === 'object') {
+                result[key] = convertUINT8ArraysToText(result[key]);
+            }
+        }
+        return result;
+
+    }
+</script>
 </body>
 </html>
