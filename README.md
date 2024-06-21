@@ -11,7 +11,7 @@ bun run dev
 
 And go to http://localhost:8000/ to see this page:
 
-![Demo screenshot](screenshot.png)
+![Demo screenshot](https://raw.githubusercontent.com/adamziel/git-sparse-checkout-in-js/trunk/screen.png)
 
 ### How it works
 
