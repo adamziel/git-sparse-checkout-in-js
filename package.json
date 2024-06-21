@@ -1,0 +1,31 @@
+{
+  "name": "sparse-checkout",
+  "version": "1.0.0",
+  "description": "",
+  "main": "browser-sparse-checkout.js",
+  "scripts": {
+    "dev": "concurrently \"npm run watch\" \"npm run cors-proxy\"",
+    "cors-proxy": "bun bin/cors-proxy.js",
+    "watch": "bun bin/build.js --serve",
+    "build": "bun bin/build.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "concurrently": "^8.2.2",
+    "cors": "^2.8.5",
+    "cors-anywhere": "^0.4.4",
+    "esbuild": "^0.21.5",
+    "esbuild-plugin-import-map": "^2.1.0",
+    "experss": "^0.0.1-security",
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.0",
+    "isomorphic-git": "git://github.com/isomorphic-git/isomorphic-git.git#bbcdda7d"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.5"
+  }
+}
