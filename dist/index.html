@@ -18,7 +18,7 @@
     input[type="text"] {
         padding: 10px;
         border: 1px solid #ccc;
-        min-width: 300px;
+        min-width: 550px;
         box-sizing: border-box;
     }
     button[type="submit"] {
@@ -39,10 +39,10 @@
     <input type="text" id="branch" name="branch" required value="HEAD"><br><br>
     <label for="paths">Paths:</label>
     <input type="text" id="paths" name="paths" required value="docs/tool,platform-docs/docs/basic-concepts,readme.txt"><br><br>
-    <button type="submit">Submit</button>
+    <button type="submit">Sparse checkout!</button>
 </form>
 <br><br>
-<div id="spinner" class="spinner">Running a sparse checkout, see devtools for more details...</div>
+<div id="spinner" class="spinner">Running sparse checkout, see devtools for more details...</div>
 <pre id="results"></pre>
 
 <script type="module">

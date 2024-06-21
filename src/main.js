@@ -19,9 +19,10 @@ export async function sparseCheckout(
     const commitHash = refs[ref];
     const treesIdx = await fetchWithoutBlobs(repoUrl, commitHash, paths);
     const objects = await resolveObjects(treesIdx, commitHash, paths);
-    const fetchedPaths = {};
 
     const blobsIdx = await fetchObjects(repoUrl, paths.map(path => objects[path].oid));
+    
+    const fetchedPaths = {};
     await Promise.all(paths.map(async path => {
         fetchedPaths[path] = await extractGitObjectFromIdx(blobsIdx, objects[path].oid)
     }));
