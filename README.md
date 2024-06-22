@@ -17,6 +17,10 @@ And go to http://localhost:8000/ to see this page:
 
 ### How it works
 
+See the full writeup at [Cloning a Git Repository From a Web Browser Using fetch()](https://adamadam.blog/2024/06/21/cloning-a-git-repository-from-a-web-browser-using-fetch/).
+
+A short summary:
+
 The browser uses the Fetch API to communicate with the Git repository using the HTTP protocol. See the `main.js` file for the implementation details. The `sparseCheckout` function looks like this:
 
 ```js
